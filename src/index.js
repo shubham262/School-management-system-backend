@@ -1,9 +1,9 @@
 import express from "express";
-import { handleMongoDbConnection } from "./config/index.js";
+import { handleBetterAuth } from "./config/auth.js";
+import { toNodeHandler } from "better-auth/node";
 const app = express();
-
-handleMongoDbConnection();
-
+const auth = await handleBetterAuth();
+app.all("/api/auth/", toNodeHandler(auth));
 app.listen(5000, () => {
 	console.log("Server started at port 5000");
 });
