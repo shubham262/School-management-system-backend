@@ -2,11 +2,9 @@ import { handleBetterAuth } from "../config/auth.js";
 import { generateSlug } from "../helpers/index.js";
 import db from "../models/index.js";
 const { School, Membership } = db;
-
+const auth = await handleBetterAuth();
 export const registerController = async (req, res) => {
 	try {
-		const auth = await handleBetterAuth();
-
 		const { email, password, name } = req.body || {};
 		const data = await auth.api.signUpEmail({
 			body: {
@@ -39,5 +37,63 @@ export const registerController = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error in registerController:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during registration",
+			error: error,
+		});
+	}
+};
+
+export const loginController = async (req, res) => {
+	try {
+		const { slug } = req.params;
+		const { email, password } = req.body || {};
+		if (!email || !password) {
+			return res.status(400).json({
+				success: false,
+				message: "Email and password are required",
+			});
+		}
+
+		const school = await School.findOne({ slug });
+		if (!school) {
+			return res.status(404).json({
+				success: false,
+				message: `No school found with slug: ${slug}`,
+			});
+		}
+
+		const data = await auth.api.signInEmail({
+			body: {
+				email,
+				password,
+			},
+		});
+
+		const membership = await Membership.findOne({
+			userId: data?.user?.id,
+			schoolId: school._id,
+		});
+		if (!membership) {
+			return res.status(403).json({
+				success: false,
+				message: `User does not have access to school with slug: ${slug}`,
+			});
+		}
+
+		res.status(200).json({
+			success: true,
+			message: `Login successful for slug: ${slug}`,
+			data,
+			membership,
+		});
+	} catch (error) {
+		console.error("Error in loginController:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during login",
+			error: error,
+		});
 	}
 };

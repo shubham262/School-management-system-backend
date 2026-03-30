@@ -1,0 +1,83 @@
+import { generateSlug } from "../helpers/index.js";
+import db from "../models/index.js";
+const { School } = db;
+
+export const fetchSchoolInformationController = async (req, res) => {
+	try {
+		const { slug } = req.params;
+		if (!slug) {
+			return res.status(400).json({
+				success: false,
+				message: "Slug is required",
+			});
+		}
+		const school = await School.findOne({ slug }).populate("createdBy");
+		if (!school) {
+			return res.status(404).json({
+				success: false,
+				message: "School not found",
+			});
+		}
+		res.status(200).json({
+			success: true,
+			message: "School information fetched successfully",
+			data: school,
+		});
+	} catch (error) {
+		console.error("Error in fetchSchoolInformationController:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred while fetching school information",
+			error: error,
+		});
+	}
+};
+
+export const updateSchoolInformationController = async (req, res) => {
+	try {
+		const { slug } = req.params;
+
+		if (!slug) {
+			return res.status(400).json({
+				success: false,
+				message: "Slug is required",
+			});
+		}
+		const { payloadForUpdate } = req.body || {};
+
+		if (!payloadForUpdate || Object.keys(payloadForUpdate).length === 0) {
+			return res.status(400).json({
+				success: false,
+				message: "Payload for update is required",
+			});
+		}
+
+		if (payloadForUpdate.name) {
+			const updatedSlug = await generateSlug(payloadForUpdate.name);
+			payloadForUpdate.slug = updatedSlug;
+		}
+		const school = await School.findOneAndUpdate(
+			{ slug },
+			{ ...payloadForUpdate },
+			{ new: true }
+		);
+		if (!school) {
+			return res.status(404).json({
+				success: false,
+				message: "School not found",
+			});
+		}
+		res.status(200).json({
+			success: true,
+			message: "School information updated successfully",
+			data: school,
+		});
+	} catch (error) {
+		console.error("Error in fetchSchoolInformationController:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred while updating school information",
+			error: error,
+		});
+	}
+};
