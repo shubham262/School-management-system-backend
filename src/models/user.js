@@ -1,4 +1,3 @@
-import { boolean, trim } from "better-auth";
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
@@ -13,7 +12,11 @@ const userSchema = new Schema(
 			type: String,
 			required: true,
 		},
-		emailVerify: boolean,
+		emailVerified: {
+			type: Boolean,
+			required: false,
+			default: false,
+		},
 		profile: {
 			type: Schema.Types.Mixed,
 			default: {},
@@ -27,6 +30,6 @@ const userSchema = new Schema(
 	{ timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema, "users");
+const User = mongoose.model("User", userSchema, "user");
 
 export default User;

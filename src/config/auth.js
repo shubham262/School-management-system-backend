@@ -2,9 +2,12 @@ import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { handleMongoDbConnection } from "./index.js";
 import { jwt, bearer } from "better-auth/plugins";
+
+let auth = null;
 export const handleBetterAuth = async () => {
+	if (auth) return auth;
 	const { db } = await handleMongoDbConnection();
-	const auth = betterAuth({
+	auth = betterAuth({
 		database: mongodbAdapter(db),
 		emailAndPassword: {
 			enabled: true,

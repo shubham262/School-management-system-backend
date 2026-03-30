@@ -1,4 +1,3 @@
-import { trim } from "better-auth";
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
