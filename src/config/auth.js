@@ -11,11 +11,14 @@ export const handleBetterAuth = async () => {
 		},
 		user: {
 			additionalFields: {
-				role: {
-					type: ["user", "admin"],
+				profile: {
+					type: "object",
 					required: false,
-					defaultValue: "user",
-					input: false, // don't allow user to set role
+					defaultValue: {},
+				},
+				changePasswordRequired: {
+					type: "boolean",
+					defaultValue: false,
 				},
 			},
 		},
