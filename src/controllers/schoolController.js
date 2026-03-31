@@ -1,6 +1,7 @@
 import { generateSlug } from "../helpers/index.js";
 import db from "../models/index.js";
-const { School } = db;
+import { sortAvailableClasses } from "../constant/index.js";
+const { School, Membership } = db;
 
 export const fetchSchoolInformationController = async (req, res) => {
 	try {
@@ -18,10 +19,21 @@ export const fetchSchoolInformationController = async (req, res) => {
 				message: "School not found",
 			});
 		}
+
+		const studentsCount = await Membership.countDocuments({
+			schoolId: school._id,
+			role: "student",
+		});
+
+		const availableClasses = school?.details?.available_classes || [];
+		const sortedAvailableClasses = sortAvailableClasses(availableClasses);
+		school.details.available_classes = sortedAvailableClasses;
+
 		res.status(200).json({
 			success: true,
 			message: "School information fetched successfully",
 			data: school,
+			totalStudents: studentsCount,
 		});
 	} catch (error) {
 		console.error("Error in fetchSchoolInformationController:", error);
