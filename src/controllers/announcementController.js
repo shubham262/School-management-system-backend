@@ -20,11 +20,11 @@ export const fetchSchoolAnnouncement = async (req, res) => {
 			});
 		}
 
-		const schoolAnnoucements = await Announcement.findOne({
+		const schoolAnnoucements = await Announcement.find({
 			schoolId: school?._id,
 			scope: "school",
 			status: "active",
-		});
+		}).sort({ createdAt: -1 });
 
 		res.status(200).json({
 			message: "Announcements fetched successfully",
