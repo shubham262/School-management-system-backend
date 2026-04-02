@@ -1,4 +1,9 @@
+import { handleBetterAuth } from "../config/auth.js";
+import db from "../models/index.js";
+const { School, Membership } = db;
+
 export const requireAdmin = async (req, res, next) => {
+	const auth = await handleBetterAuth();
 	try {
 		const authHeader = req.headers?.authorization || req.headers?.Authorization;
 		if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -17,6 +22,7 @@ export const requireAdmin = async (req, res, next) => {
 				message: "Invalid session or user not found",
 			});
 		}
+
 		const userId = session.user.id;
 		const { slug } = req.params;
 		if (!slug) {
@@ -25,7 +31,7 @@ export const requireAdmin = async (req, res, next) => {
 				message: "Slug is required",
 			});
 		}
-		const school = await School.findOne({ slug }).populate;
+		const school = await School.findOne({ slug });
 		if (!school) {
 			return res.status(404).json({
 				success: false,
@@ -38,6 +44,7 @@ export const requireAdmin = async (req, res, next) => {
 			schoolId: school._id,
 			role: "admin",
 		});
+
 		if (!membership) {
 			return res.status(403).json({
 				success: false,

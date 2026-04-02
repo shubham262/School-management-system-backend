@@ -12,7 +12,7 @@ export const fetchSchoolAnnouncement = async (req, res) => {
 				message: "Slug is required",
 			});
 		}
-		const school = await School.findOne({ slug }).populate("createdBy");
+		const school = await School.findOne({ slug });
 		if (!school) {
 			return res.status(404).json({
 				success: false,
@@ -20,20 +20,15 @@ export const fetchSchoolAnnouncement = async (req, res) => {
 			});
 		}
 
-		const studentsCount = await Membership.countDocuments({
-			schoolId: school._id,
-			role: "student",
+		const schoolAnnoucements = await Announcement.findOne({
+			schoolId: school?._id,
+			scope: "school",
+			status: "active",
 		});
 
-		const availableClasses = school?.details?.available_classes || [];
-		const sortedAvailableClasses = sortAvailableClasses(availableClasses);
-		school.details.available_classes = sortedAvailableClasses;
-
 		res.status(200).json({
-			success: true,
-			message: "School information fetched successfully",
-			data: school,
-			totalStudents: studentsCount,
+			message: "Announcements fetched successfully",
+			schoolAnnoucements,
 		});
 	} catch (error) {
 		console.error("Error in fetchSchoolAnnouncement:", error);
@@ -47,42 +42,32 @@ export const fetchSchoolAnnouncement = async (req, res) => {
 
 export const createSchoolAnnouncement = async (req, res) => {
 	try {
-		const { slug } = req.params;
+		const user = req.user;
 
-		if (!slug) {
+		const school = req.school;
+
+		const { tag, title, description } = req?.body || {};
+
+		if (!tag || !title || !description) {
 			return res.status(400).json({
 				success: false,
-				message: "Slug is required",
-			});
-		}
-		const { payloadForUpdate } = req.body || {};
-
-		if (!payloadForUpdate || Object.keys(payloadForUpdate).length === 0) {
-			return res.status(400).json({
-				success: false,
-				message: "Payload for update is required",
+				message: "Tag, title and description are required",
 			});
 		}
 
-		if (payloadForUpdate.name) {
-			const updatedSlug = await generateSlug(payloadForUpdate.name);
-			payloadForUpdate.slug = updatedSlug;
-		}
-		const school = await School.findOneAndUpdate(
-			{ slug },
-			{ ...payloadForUpdate },
-			{ new: true }
-		);
-		if (!school) {
-			return res.status(404).json({
-				success: false,
-				message: "School not found",
-			});
-		}
-		res.status(200).json({
+		const announcement = await Announcement.create({
+			schoolId: school._id,
+			tag,
+			title,
+			description,
+			scope: "school",
+			createdBy: user.id,
+		});
+
+		return res.status(201).json({
 			success: true,
-			message: "School information updated successfully",
-			data: school,
+			message: "Announcement created successfully",
+			data: announcement,
 		});
 	} catch (error) {
 		console.error("Error in createAnnouncement:", error);
