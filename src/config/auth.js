@@ -28,6 +28,7 @@ export const handleBetterAuth = async () => {
 		plugins: [jwt(), bearer()],
 
 		baseURL: "http://localhost:3001",
+		trustedOrigins: ["http://localhost:3000"],
 	});
 
 	return auth;
