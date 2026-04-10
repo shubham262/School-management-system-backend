@@ -22,7 +22,8 @@ export const fetchSchoolAnnouncement = async (req, res) => {
 			});
 		}
 
-		let scope = all ? {} : { scope: "school" };
+		let scope = all === "true" ? {} : { scope: "school" };
+
 		const schoolAnnoucements = await Announcement.find({
 			schoolId: school?._id,
 			status: "active",

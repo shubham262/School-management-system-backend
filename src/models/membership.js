@@ -18,6 +18,11 @@ const membershipSchema = new Schema(
 			enum: ["admin", "student", "teacher"],
 			required: true,
 		},
+		profile: {
+			type: Schema.Types.Mixed,
+			default: {},
+			required: false,
+		},
 
 		metadata: {
 			type: Schema.Types.Mixed,

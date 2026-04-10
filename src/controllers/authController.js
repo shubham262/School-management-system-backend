@@ -116,7 +116,6 @@ export const updateUserController = async (req, res) => {
 			{ returnDocument: "after" }
 		);
 
-		
 		res.status(200).json({
 			success: true,
 			message: `User updated`,
@@ -127,6 +126,62 @@ export const updateUserController = async (req, res) => {
 		res.status(error?.statusCode || 500).json({
 			success: false,
 			message: "An error occurred during updating user",
+			error: error,
+		});
+	}
+};
+
+export const createUserInBulk = async (req, res) => {
+	try {
+		const school = req.school;
+
+		const { users = [] } = req.body || [];
+		if (!users?.length) {
+			return res.status(400).json({
+				success: false,
+				message: "users are required",
+			});
+		}
+
+		const results = [];
+		for (let i = 0; i < users?.length; i++) {
+			const { email, name, role, profile = {} } = users?.[i] || {};
+
+			if (!email || !name || !role) {
+				continue;
+			}
+
+			const data = await auth.api.signUpEmail({
+				body: {
+					email,
+					password: "12345678",
+					name,
+					changePasswordRequired: true,
+				},
+			});
+			const userId = data?.user?.id;
+
+			const memebership = await Membership.create({
+				userId,
+				schoolId: school._id,
+				role,
+				profile,
+			});
+
+			results.push({
+				user: data,
+			});
+		}
+		return res.status(200).json({
+			success: true,
+			message: "User added successfully",
+			data: results,
+		});
+	} catch (error) {
+		console.error("Error in createUserInBulk:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during registration",
 			error: error,
 		});
 	}

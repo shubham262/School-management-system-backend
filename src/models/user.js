@@ -17,11 +17,7 @@ const userSchema = new Schema(
 			required: false,
 			default: false,
 		},
-		profile: {
-			type: Schema.Types.Mixed,
-			default: {},
-			required: false,
-		},
+
 		changePasswordRequired: {
 			type: Boolean,
 			default: false,
