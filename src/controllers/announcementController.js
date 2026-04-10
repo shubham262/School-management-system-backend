@@ -6,6 +6,8 @@ const { School, Membership, Announcement } = db;
 export const fetchSchoolAnnouncement = async (req, res) => {
 	try {
 		const { slug } = req.params;
+		const { all = false } = req.query;
+
 		if (!slug) {
 			return res.status(400).json({
 				success: false,
@@ -20,10 +22,11 @@ export const fetchSchoolAnnouncement = async (req, res) => {
 			});
 		}
 
+		let scope = all ? {} : { scope: "school" };
 		const schoolAnnoucements = await Announcement.find({
 			schoolId: school?._id,
-			scope: "school",
 			status: "active",
+			...scope,
 		}).sort({ createdAt: -1 });
 
 		res.status(200).json({
@@ -46,7 +49,13 @@ export const createSchoolAnnouncement = async (req, res) => {
 
 		const school = req.school;
 
-		const { tag, title, description } = req?.body || {};
+		const {
+			tag,
+			title,
+			description,
+			scope = "school",
+			classes = [],
+		} = req?.body || {};
 
 		if (!tag || !title || !description) {
 			return res.status(400).json({
@@ -55,13 +64,16 @@ export const createSchoolAnnouncement = async (req, res) => {
 			});
 		}
 
+		let classPayload = classes?.length ? { classes } : {};
+
 		const announcement = await Announcement.create({
 			schoolId: school._id,
 			tag,
 			title,
 			description,
-			scope: "school",
+			scope,
 			createdBy: user.id,
+			...classPayload,
 		});
 
 		return res.status(201).json({
@@ -74,6 +86,82 @@ export const createSchoolAnnouncement = async (req, res) => {
 		res.status(error?.statusCode || 500).json({
 			success: false,
 			message: "An error occurred while creating announcement",
+			error: error,
+		});
+	}
+};
+
+export const deleteSchoolAnnouncement = async (req, res) => {
+	try {
+		const { annoucementId } = req.params;
+
+		if (!annoucementId) {
+			return res.status(400).json({
+				success: false,
+				message: "AnnoucementId was required",
+			});
+		}
+
+		const announcement = await Announcement.findOneAndDelete({
+			_id: annoucementId,
+		});
+		if (!announcement) {
+			return res.status(400).json({
+				success: false,
+				message: "Annoucement with provided id was not found",
+			});
+		}
+		return res.status(201).json({
+			success: true,
+			message: "Announcement deleted successfully",
+			data: announcement,
+		});
+	} catch (error) {
+		console.error("Error in deleteSchoolAnnouncement:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred while deleting announement",
+			error: error,
+		});
+	}
+};
+
+export const updateAnnouncement = async (req, res) => {
+	try {
+		const { annoucementId } = req.params;
+
+		const { payloadForUpdate } = req.body || {};
+
+		if (!payloadForUpdate) {
+			return res.status(400).json({
+				success: false,
+				message: "payloadForUpdate is required",
+			});
+		}
+
+		const announcement = await Announcement.findOneAndUpdate(
+			{ _id: annoucementId },
+			{ ...payloadForUpdate },
+			{ returnDocument: "after" }
+		);
+
+		if (!announcement) {
+			return res.status(400).json({
+				success: false,
+				message: "Annoucement with provided id was not found",
+			});
+		}
+
+		return res.status(201).json({
+			success: true,
+			message: "Announcement updated successfully",
+			data: announcement,
+		});
+	} catch (error) {
+		console.error("Error in updateAnnouncement:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred while updating announcement",
 			error: error,
 		});
 	}

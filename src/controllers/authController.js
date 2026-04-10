@@ -1,7 +1,7 @@
 import { handleBetterAuth } from "../config/auth.js";
 import { generateSlug } from "../helpers/index.js";
 import db from "../models/index.js";
-const { School, Membership } = db;
+const { School, Membership, User } = db;
 const auth = await handleBetterAuth();
 export const registerController = async (req, res) => {
 	try {
@@ -93,6 +93,40 @@ export const loginController = async (req, res) => {
 		res.status(error?.statusCode || 500).json({
 			success: false,
 			message: "An error occurred during login",
+			error: error,
+		});
+	}
+};
+
+export const updateUserController = async (req, res) => {
+	try {
+		const user = req.user;
+		const { payloadForUpdate } = req.body || {};
+
+		if (!payloadForUpdate) {
+			return res.status(400).json({
+				success: false,
+				message: "payloadForUpdate is required",
+			});
+		}
+
+		const newUserInformation = await User.findOneAndUpdate(
+			{ _id: user.id },
+			{ ...payloadForUpdate },
+			{ returnDocument: "after" }
+		);
+
+		
+		res.status(200).json({
+			success: true,
+			message: `User updated`,
+			user: newUserInformation,
+		});
+	} catch (error) {
+		console.error("Error in loginController:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during updating user",
 			error: error,
 		});
 	}
