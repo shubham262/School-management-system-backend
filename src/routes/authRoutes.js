@@ -2,8 +2,10 @@ import express from "express";
 import {
 	createUserInBulk,
 	fetchAllStudents,
+	fetchAllTeachers,
 	loginController,
 	registerController,
+	removeUserFromSchool,
 	updateUserController,
 } from "../controllers/authController.js";
 import {
@@ -20,5 +22,11 @@ router.put(
 );
 router.post("/:slug/add-bulk-user", requireAdmin, createUserInBulk);
 router.get("/:slug/fetch-all-students", requireAdmin, fetchAllStudents);
+router.get("/:slug/fetch-all-teachers", requireAdmin, fetchAllTeachers);
+router.delete(
+	"/:slug/remove-user-from-school/:userId",
+	requireAdmin,
+	removeUserFromSchool
+);
 
 export default router;

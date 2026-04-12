@@ -215,15 +215,17 @@ export const fetchAllStudents = async (req, res) => {
 
 		page = parseInt(page);
 		limit = parseInt(limit);
+		studentClass = studentClass ? JSON.parse(studentClass) : [];
 		const skip = (page - 1) * limit;
-
-		//membership
-		//aggregration--concept
 
 		const filter = {
 			schoolId: school?._id,
 			role: "student",
 		};
+
+		if (studentClass?.length) {
+			filter["profile.class"] = { $in: studentClass };
+		}
 
 		const pipeline = [
 			{
@@ -248,13 +250,13 @@ export const fetchAllStudents = async (req, res) => {
 									{
 										"user.email": {
 											$regex: query,
-											$option: "i",
+											$options: "i",
 										},
 									},
 									{
 										"user.name": {
 											$regex: query,
-											$option: "i",
+											$options: "i",
 										},
 									},
 								],
@@ -267,7 +269,7 @@ export const fetchAllStudents = async (req, res) => {
 				$project: {
 					name: "$user.name",
 					email: "$user.email",
-					id: "$user.id",
+					userId: "$user._id",
 					className: "$profile.class",
 				},
 			},
@@ -296,6 +298,151 @@ export const fetchAllStudents = async (req, res) => {
 		res.status(error?.statusCode || 500).json({
 			success: false,
 			message: "An error occurred during registration",
+			error: error,
+		});
+	}
+};
+
+export const fetchAllTeachers = async (req, res) => {
+	try {
+		const school = req.school;
+		let {
+			page = 1,
+			limit = 10,
+			query = "",
+			classFilter = "",
+			subjectsFilter = "",
+		} = req.query || {};
+
+		page = parseInt(page);
+		limit = parseInt(limit);
+		classFilter = classFilter ? JSON.parse(classFilter) : [];
+		subjectsFilter = subjectsFilter ? JSON.parse(subjectsFilter) : [];
+		const skip = (page - 1) * limit;
+
+		const filter = {
+			schoolId: school?._id,
+			role: "teacher",
+		};
+
+		if (classFilter?.length) {
+			filter["profile.classes"] = { $in: classFilter };
+		}
+
+		if (subjectsFilter?.length) {
+			filter["profile.subjects"] = { $in: subjectsFilter };
+		}
+
+		const pipeline = [
+			{
+				$match: filter,
+			},
+			{
+				$lookup: {
+					from: "user",
+					localField: "userId",
+					foreignField: "_id",
+					as: "user",
+				},
+			},
+			{
+				$unwind: "$user",
+			},
+			...(query
+				? [
+						{
+							$match: {
+								$or: [
+									{
+										"user.email": {
+											$regex: query,
+											$options: "i",
+										},
+									},
+									{
+										"user.name": {
+											$regex: query,
+											$options: "i",
+										},
+									},
+								],
+							},
+						},
+				  ]
+				: []),
+
+			{
+				$project: {
+					name: "$user.name",
+					email: "$user.email",
+					userId: "$user._id",
+					classes: "$profile.classes",
+					subjects: "$profile.subjects",
+				},
+			},
+			{
+				$sort: { createdAt: -1 },
+			},
+			{
+				$facet: {
+					data: [{ $skip: skip }, { $limit: limit }],
+					totalDocument: [{ $count: "count" }],
+				},
+			},
+		];
+
+		const results = await Membership.aggregate(pipeline);
+		const teachers = results?.[0]?.data;
+		const total = results?.[0]?.totalDocument;
+
+		return res.status(200).json({
+			success: true,
+			message: "User added successfully",
+			data: { teachers, total },
+		});
+	} catch (error) {
+		console.error("Error in fetchAllTeachers:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during fetchAllTeachers",
+			error: error,
+		});
+	}
+};
+
+export const removeUserFromSchool = async (req, res) => {
+	try {
+		const school = req.school;
+		const { userId } = req.params;
+		if (!userId) {
+			return res.status(400).json({
+				success: false,
+				message: "UserId required",
+			});
+		}
+
+		const membership = await Membership.findOneAndDelete({
+			schoolId: school?._id,
+			userId: userId,
+		});
+
+		if (!membership) {
+			return res.status(400).json({
+				success: false,
+				message: "Could not find any user with the given id",
+			});
+		}
+
+		return res.status(200).json({
+			success: true,
+			message: "User deleted from the school  successfully",
+			data: membership,
+		});
+	} catch (error) {
+		console.error("Error in removeUserFromSchool:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during removeUserFromSchool",
 			error: error,
 		});
 	}
