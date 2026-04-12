@@ -1,6 +1,7 @@
 import express from "express";
 import {
 	createUserInBulk,
+	fetchAllStudents,
 	loginController,
 	registerController,
 	updateUserController,
@@ -18,5 +19,6 @@ router.put(
 	updateUserController
 );
 router.post("/:slug/add-bulk-user", requireAdmin, createUserInBulk);
+router.get("/:slug/fetch-all-students", requireAdmin, fetchAllStudents);
 
 export default router;

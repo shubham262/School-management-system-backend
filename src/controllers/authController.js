@@ -143,22 +143,29 @@ export const createUserInBulk = async (req, res) => {
 			});
 		}
 
-		const results = [];
-		for (let i = 0; i < users?.length; i++) {
-			const { email, name, role, profile = {} } = users?.[i] || {};
+		const results = users?.map(async (user) => {
+			const { email, name, role, profile = {} } = user || {};
 
 			if (!email || !name || !role) {
-				continue;
+				return { success: false, reason: "Email ,name and role is required" };
 			}
 
-			const data = await auth.api.signUpEmail({
-				body: {
-					email,
-					password: "12345678",
-					name,
-					changePasswordRequired: true,
-				},
-			});
+			try {
+				const data = await auth.api.signUpEmail({
+					body: {
+						email,
+						password: "12345678",
+						name,
+						changePasswordRequired: true,
+					},
+				});
+			} catch (error) {
+				return {
+					success: false,
+					reason: "user may already exisit with the provided email id",
+				};
+			}
+
 			const userId = data?.user?.id;
 
 			const memebership = await Membership.create({
@@ -167,15 +174,122 @@ export const createUserInBulk = async (req, res) => {
 				role,
 				profile,
 			});
+			//make an api call to that email sending microservice
 
-			results.push({
-				user: data,
-			});
-		}
+			return {
+				success: true,
+				message: "User added SuccessFully",
+				data: {
+					user: data?.user,
+					memebership,
+				},
+			};
+		});
+
+		const response = await Promise.all(results);
+
 		return res.status(200).json({
 			success: true,
 			message: "User added successfully",
-			data: results,
+			data: response,
+		});
+	} catch (error) {
+		console.error("Error in createUserInBulk:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during registration",
+			error: error,
+		});
+	}
+};
+
+export const fetchAllStudents = async (req, res) => {
+	try {
+		const school = req.school;
+		let {
+			page = 1,
+			limit = 10,
+			query = "",
+			studentClass = "",
+		} = req.query || {};
+
+		page = parseInt(page);
+		limit = parseInt(limit);
+		const skip = (page - 1) * limit;
+
+		//membership
+		//aggregration--concept
+
+		const filter = {
+			schoolId: school?._id,
+			role: "student",
+		};
+
+		const pipeline = [
+			{
+				$match: filter,
+			},
+			{
+				$lookup: {
+					from: "user",
+					localField: "userId",
+					foreignField: "_id",
+					as: "user",
+				},
+			},
+			{
+				$unwind: "$user",
+			},
+			...(query
+				? [
+						{
+							$match: {
+								$or: [
+									{
+										"user.email": {
+											$regex: query,
+											$option: "i",
+										},
+									},
+									{
+										"user.name": {
+											$regex: query,
+											$option: "i",
+										},
+									},
+								],
+							},
+						},
+				  ]
+				: []),
+
+			{
+				$project: {
+					name: "$user.name",
+					email: "$user.email",
+					id: "$user.id",
+					className: "$profile.class",
+				},
+			},
+			{
+				$sort: { createdAt: -1 },
+			},
+			{
+				$facet: {
+					data: [{ $skip: skip }, { $limit: limit }],
+					totalDocument: [{ $count: "count" }],
+				},
+			},
+		];
+
+		const results = await Membership.aggregate(pipeline);
+		const students = results?.[0]?.data;
+		const total = results?.[0]?.totalDocument;
+
+		return res.status(200).json({
+			success: true,
+			message: "User added successfully",
+			data: { students, total },
 		});
 	} catch (error) {
 		console.error("Error in createUserInBulk:", error);
