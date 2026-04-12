@@ -286,7 +286,7 @@ export const fetchAllStudents = async (req, res) => {
 
 		const results = await Membership.aggregate(pipeline);
 		const students = results?.[0]?.data;
-		const total = results?.[0]?.totalDocument;
+		const total = results?.[0]?.totalDocument?.[0]?.count;
 
 		return res.status(200).json({
 			success: true,
@@ -393,7 +393,7 @@ export const fetchAllTeachers = async (req, res) => {
 
 		const results = await Membership.aggregate(pipeline);
 		const teachers = results?.[0]?.data;
-		const total = results?.[0]?.totalDocument;
+		const total = results?.[0]?.totalDocument?.[0]?.count;
 
 		return res.status(200).json({
 			success: true,
