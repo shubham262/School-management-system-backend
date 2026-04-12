@@ -447,3 +447,48 @@ export const removeUserFromSchool = async (req, res) => {
 		});
 	}
 };
+
+export const updateUserPassword = async (req, res) => {
+	try {
+		const { currentPassword, newPassword } = req.body || {};
+		const user = req.user;
+		if (!currentPassword || !newPassword) {
+			return res.status(400).json({
+				success: false,
+				message: "currentPassword and newPassword are  required",
+			});
+		}
+		const authHeader = req.headers?.authorization || req.headers?.Authorization;
+		const response = await auth.api.changePassword({
+			body: {
+				newPassword,
+				currentPassword,
+			},
+			headers: new Headers({ authorization: authHeader }),
+		});
+
+		const newUser = await User.findOneAndUpdate(
+			{ _id: user?.id },
+			{
+				changePasswordRequired: false,
+			},
+			{
+				returnDocument: "after",
+			}
+		);
+
+		return res.status(200).json({
+			success: true,
+			message: "User password got changed successfully",
+			data: response,
+			user: newUser,
+		});
+	} catch (error) {
+		console.error("Error in updateUserPassword:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during updateUserPassword",
+			error: error,
+		});
+	}
+};

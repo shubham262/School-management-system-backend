@@ -7,6 +7,7 @@ import {
 	registerController,
 	removeUserFromSchool,
 	updateUserController,
+	updateUserPassword,
 } from "../controllers/authController.js";
 import {
 	requireAdmin,
@@ -27,6 +28,12 @@ router.delete(
 	"/:slug/remove-user-from-school/:userId",
 	requireAdmin,
 	removeUserFromSchool
+);
+
+router.put(
+	"/:slug/change-password",
+	requireAuthenticationCheck,
+	updateUserPassword
 );
 
 export default router;
