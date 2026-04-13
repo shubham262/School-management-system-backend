@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { handleMongoDbConnection } from "./index.js";
@@ -26,9 +28,15 @@ export const handleBetterAuth = async () => {
 			},
 		},
 		plugins: [jwt(), bearer()],
-
-		baseURL: "http://localhost:3001",
+		secret: process.env.BETTER_AUTH_SECRET,
+		baseURL: process.env.BETTER_AUTH_URL,
 		trustedOrigins: ["http://localhost:3000"],
+		socialProviders: {
+			google: {
+				clientId: process.env.GOOGLE_CLIENT_ID,
+				clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+			},
+		},
 	});
 
 	return auth;

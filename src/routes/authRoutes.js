@@ -3,8 +3,11 @@ import {
 	createUserInBulk,
 	fetchAllStudents,
 	fetchAllTeachers,
+	fetchUserInfo,
+	fetchUserInformation,
 	loginController,
 	registerController,
+	registerNew,
 	removeUserFromSchool,
 	updateUserController,
 	updateUserPassword,
@@ -35,5 +38,14 @@ router.put(
 	requireAuthenticationCheck,
 	updateUserPassword
 );
+
+router.get(
+	"/:slug/fetchUserInformation",
+	requireAuthenticationCheck,
+	fetchUserInformation
+);
+
+router.get("/fetchUser", fetchUserInfo);
+router.post("/register-fresh", registerNew);
 
 export default router;

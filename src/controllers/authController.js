@@ -492,3 +492,116 @@ export const updateUserPassword = async (req, res) => {
 		});
 	}
 };
+
+export const fetchUserInformation = async (req, res) => {
+	try {
+		const user = req.user;
+		const school = req.school;
+		const membership = req.membership;
+		return res.status(200).json({
+			success: true,
+			message: "User password got changed successfully",
+			data: { user, school, membership },
+		});
+	} catch (error) {
+		console.error("Error in fetchUserInformation:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during fetchUserInformation",
+			error: error,
+		});
+	}
+};
+
+export const fetchUserInfo = async (req, res) => {
+	try {
+		const authHeader = req.headers?.authorization || req.headers?.Authorization;
+		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+			return res.status(401).json({
+				success: false,
+				message: "Authorization header missing or malformed",
+			});
+		}
+		const session = await auth.api.getSession({
+			headers: new Headers({ authorization: authHeader }),
+		});
+		if (!session || !session.user) {
+			return res.status(401).json({
+				success: false,
+				message: "Invalid session or user not found",
+			});
+		}
+
+		const userId = session.user.id;
+
+		const membership = await Membership.find({
+			userId,
+		}).populate("schoolId");
+
+		return res.status(200).json({
+			success: true,
+			message: "User password got changed successfully",
+			message: "Found your existing membership",
+			membership,
+			user: session?.user,
+		});
+	} catch (error) {
+		console.error("Error in fetchUserInformation:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during fetchUserInformation",
+			error: error,
+		});
+	}
+};
+
+export const registerNew = async (req, res) => {
+	try {
+		const authHeader = req.headers?.authorization || req.headers?.Authorization;
+		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+			return res.status(401).json({
+				success: false,
+				message: "Authorization header missing or malformed",
+			});
+		}
+		const session = await auth.api.getSession({
+			headers: new Headers({ authorization: authHeader }),
+		});
+		if (!session || !session.user) {
+			return res.status(401).json({
+				success: false,
+				message: "Invalid session or user not found",
+			});
+		}
+
+		const userId = session.user.id;
+		const slug = await generateSlug("dummy");
+		const school = await School.create({
+			name: "dummy",
+			slug,
+			createdBy: userId,
+		});
+		const memebership = await Membership.create({
+			userId,
+			schoolId: school._id,
+			role: "admin",
+		});
+
+		res.status(200).json({
+			success: true,
+			message: "User registered successfully",
+			data: { user: session.user },
+
+			slug,
+			school,
+			memebership,
+		});
+	} catch (error) {
+		console.error("Error in registerNew:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during registerNew",
+			error: error,
+		});
+	}
+};
