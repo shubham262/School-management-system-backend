@@ -3,6 +3,7 @@ import {
 	createUserInBulk,
 	fetchAllStudents,
 	fetchAllTeachers,
+	fetchAttendence,
 	fetchUserInfo,
 	fetchUserInformation,
 	loginController,
@@ -47,5 +48,12 @@ router.get(
 
 router.get("/fetchUser", fetchUserInfo);
 router.post("/register-fresh", registerNew);
+
+
+router.get(
+	"/:slug/student-attendence",
+	requireAuthenticationCheck,
+	fetchAttendence
+);
 
 export default router;

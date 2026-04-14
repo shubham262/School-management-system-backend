@@ -605,3 +605,95 @@ export const registerNew = async (req, res) => {
 		});
 	}
 };
+
+export const fetchAttendence = async (req, res) => {
+	try {
+		const school = req.school;
+		const { studentClass, date } = req.query;
+
+		if (!studentClass || !date) {
+			return res.status(400).json({
+				success: false,
+				message: "class and date are required",
+			});
+		}
+
+		const pipeline = [
+			{
+				$match: {
+					schoolId: school._id,
+					role: "student",
+					"profile.class": studentClass,
+				},
+			},
+			{
+				$lookup: {
+					from: "user",
+					localField: "userId",
+					foreignField: "_id",
+					as: "user",
+				},
+			},
+			{ $unwind: "$user" },
+
+			{
+				$lookup: {
+					from: "attendences", // make sure this matches your collection name
+					let: { userId: "$user._id" },
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$and: [
+										{ $eq: ["$userId", "$$userId"] },
+										{ $eq: ["$schoolId", school._id] },
+										{ $eq: ["$date", date] }, // string match
+									],
+								},
+							},
+						},
+					],
+					as: "attendance",
+				},
+			},
+
+			{
+				$unwind: {
+					path: "$attendance",
+					preserveNullAndEmptyArrays: true,
+				},
+			},
+
+			{
+				$project: {
+					name: "$user.name",
+					email: "$user.email",
+					userId: "$user._id",
+					className: "$profile.class",
+					attendanceStatus: {
+						$ifNull: ["$attendance.status", "not-marked"],
+					},
+					attendanceId: "$attendance._id",
+					rollNo: "$profile.rollNumber",
+				},
+			},
+
+			{ $sort: { createdAt: -1 } },
+		];
+
+		const students = await Membership.aggregate(pipeline);
+
+		return res.status(200).json({
+			success: true,
+			message: "Attendance fetched successfully",
+			data: students,
+		});
+	} catch (error) {
+		console.error("Error in fetchAttendence:", error);
+		return res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during fetchAttendence",
+			error: error,
+		});
+	}
+};
