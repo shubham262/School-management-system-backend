@@ -1,7 +1,7 @@
 import { handleBetterAuth } from "../config/auth.js";
 import { generateSlug } from "../helpers/index.js";
 import db from "../models/index.js";
-const { School, Membership, User } = db;
+const { School, Membership, User, Attendence } = db;
 const auth = await handleBetterAuth();
 export const registerController = async (req, res) => {
 	try {
@@ -601,6 +601,145 @@ export const registerNew = async (req, res) => {
 		res.status(error?.statusCode || 500).json({
 			success: false,
 			message: "An error occurred during registerNew",
+			error: error,
+		});
+	}
+};
+
+export const fetchStudentAttendence = async (req, res) => {
+	try {
+		const school = req.school;
+		let { studentClass = "", date = "" } = req.query || {};
+
+		if (!studentClass || !date) {
+			return res.status(400).json({
+				success: false,
+				message: "Student Class and Date both are mandatory",
+			});
+		}
+
+		const filter = {
+			schoolId: school?._id,
+			role: "student",
+			"profile.class": studentClass,
+		};
+
+		const pipeline = [
+			{
+				$match: filter,
+			},
+			{
+				$lookup: {
+					from: "user",
+					localField: "userId",
+					foreignField: "_id",
+					as: "user",
+				},
+			},
+			{
+				$unwind: "$user",
+			},
+			{
+				$lookup: {
+					from: "attendences",
+					let: { userId: "$user._id" },
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$and: [
+										{ $eq: ["$userId", "$$userId"] },
+										{ $eq: ["$schoolId", school?._id] },
+										{ $eq: ["$date", date] },
+									],
+								},
+							},
+						},
+					],
+					as: "attendence",
+				},
+			},
+			{
+				$unwind: {
+					path: "$attendence",
+					preserveNullAndEmptyArrays: true,
+				},
+			},
+
+			{
+				$project: {
+					name: "$user.name",
+					email: "$user.email",
+					userId: "$user._id",
+					className: "$profile.class",
+					rollNo: "$profile.rollNumber",
+					attendenceStatus: {
+						$ifNull: ["$attendence.status", "not-marked"],
+					},
+				},
+			},
+			{
+				$sort: { createdAt: -1 },
+			},
+		];
+
+		const results = await Membership.aggregate(pipeline);
+
+		return res.status(200).json({
+			message: "Attendence fetched successfully",
+			results,
+		});
+	} catch (error) {
+		console.error("Error in fetchStudentAttendence:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during fetchStudentAttendence",
+			error: error,
+		});
+	}
+};
+
+export const saveStudentsAttendence = async (req, res) => {
+	try {
+		const school = req.school;
+		const user = req.user;
+		const { students = [], date = "" } = req.body || {};
+
+		if (!students?.length || !date) {
+			return res.status(400).json({
+				success: false,
+				message: "Student Array and Date both are mandatory",
+			});
+		}
+
+		const bulkOps = students?.map((student) => ({
+			updateOne: {
+				filter: {
+					userId: student?.userId,
+					schoolId: school?._id,
+					date: date,
+				},
+				update: {
+					$set: {
+						status: student?.attendenceStatus,
+						markedBy: user?.id,
+					},
+				},
+				upsert: true, //create
+			},
+		}));
+
+		const results = await Attendence.bulkWrite(bulkOps);
+
+		return res.status(200).json({
+			message: "Attendence updated successfully",
+			results,
+		});
+	} catch (error) {
+		console.error("Error in saveStudentsAttendence:", error);
+		res.status(error?.statusCode || 500).json({
+			success: false,
+			message: "An error occurred during saveStudentsAttendence",
 			error: error,
 		});
 	}

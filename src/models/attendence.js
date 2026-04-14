@@ -19,7 +19,7 @@ const attendeceSchema = new Schema(
 			default: "not-marked",
 		},
 		date: {
-			type: Date,
+			type: String, ///YYYY-MM-DD
 			required: true,
 		},
 		metadata: {

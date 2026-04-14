@@ -3,12 +3,14 @@ import {
 	createUserInBulk,
 	fetchAllStudents,
 	fetchAllTeachers,
+	fetchStudentAttendence,
 	fetchUserInfo,
 	fetchUserInformation,
 	loginController,
 	registerController,
 	registerNew,
 	removeUserFromSchool,
+	saveStudentsAttendence,
 	updateUserController,
 	updateUserPassword,
 } from "../controllers/authController.js";
@@ -47,5 +49,17 @@ router.get(
 
 router.get("/fetchUser", fetchUserInfo);
 router.post("/register-fresh", registerNew);
+
+router.get(
+	"/:slug/fetch-students-attendence",
+	requireAuthenticationCheck,
+	fetchStudentAttendence
+);
+
+router.post(
+	"/:slug/save-students-attendence",
+	requireAuthenticationCheck,
+	saveStudentsAttendence
+);
 
 export default router;
